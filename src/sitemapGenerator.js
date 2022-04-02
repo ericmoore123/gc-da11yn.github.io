@@ -1,31 +1,17 @@
-const fs = require("fs-extra");
-const path = require("path");
+const { resolve } = require('path');
+const { readdir } = require('fs').promises;
 
-const outputFile = "output.json";
+async function getFiles(dir) {
+  const dirents = await readdir(dir, { withFileTypes: true });
+  const files = await Promise.all(dirents.map((dirent) => {
+    const res = resolve(dir, dirent.name);
+    return dirent.isDirectory() ? getFiles(res) : res;
+  }));
+  return Array.prototype.concat(...files);
+}
 
-const buildFile = () => {
-  const contentFolder = path.resolve("datafiles");
-  const dataFolders = fs.readdirSync(contentFolder);
-
-  // begin parsing each folder
-  const newData = dataFolders.map((folder, i) => {
-    const dataFile = path.resolve(contentFolder, folder, "data.json");
-
-    // be sure the file exists!
-    if (fs.pathExistsSync(dataFile)) {
-      const jsondata = fs.readJSONSync(dataFile);
-      return {
-        name: jsondata.name,
-        price: jsondata.price
-      };
-    }
-  });
-
-  //filter out null values (from possible missing/empty data files)
-  const finalData = newData.filter(item => item);
-
-  fs.writeJSONSync(outputFile, finalData);
-  console.log("Success!");
+const start = async (directory) => {
+    console.log(await getFiles(directory));
 };
 
-buildFile();
+start('./en');
